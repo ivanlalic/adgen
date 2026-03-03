@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ImageUploader from './ImageUploader'
 import ErrorMessage from './ErrorMessage'
 import { uploadProductImages } from '@/lib/uploadToStorage'
@@ -16,7 +16,19 @@ export default function Step1Upload({ onBack, onComplete }) {
   const [descripcion, setDescripcion] = useState('')
   const [cargando, setCargando] = useState(false)
   const [mensajeCarga, setMensajeCarga] = useState('')
+  const [segundos, setSegundos] = useState(0)
   const [error, setError] = useState(null)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    if (cargando) {
+      setSegundos(0)
+      timerRef.current = setInterval(() => setSegundos(s => s + 1), 1000)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [cargando])
 
   const canSubmit = nombre.trim() && files.length > 0 && !cargando
 
@@ -160,8 +172,9 @@ export default function Step1Upload({ onBack, onComplete }) {
           <div className="text-center">
             <p className="text-white text-lg font-medium">{mensajeCarga}</p>
             <p className="text-gray-500 text-sm mt-1">
-              {mensajeCarga === 'Analizando con IA...' ? 'Esto puede tardar ~20 segundos' : 'Por favor esperá...'}
+              {mensajeCarga === 'Analizando con IA...' ? 'Esto puede tardar hasta 60 segundos' : 'Por favor esperá...'}
             </p>
+            <p className="text-violet-400 text-sm font-mono mt-2">{segundos}s</p>
           </div>
           <div className="flex gap-2 mt-2">
             {['Subiendo imágenes...', 'Analizando con IA...'].map((paso, i) => (
