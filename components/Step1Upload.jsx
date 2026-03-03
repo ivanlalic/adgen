@@ -138,27 +138,47 @@ export default function Step1Upload({ onBack, onComplete }) {
               </div>
             )}
 
-            {cargando ? (
-              <div className="ml-auto flex items-center gap-3 text-sm text-gray-400">
-                <div className="w-4 h-4 border-2 border-gray-700 border-t-violet-500 rounded-full animate-spin" />
-                {mensajeCarga}
-              </div>
-            ) : (
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all
-                  ${canSubmit ? 'bg-violet-600 hover:bg-violet-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
-              >
-                Analizar producto
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
-                </svg>
-              </button>
-            )}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className={`ml-auto flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all
+                ${canSubmit ? 'bg-violet-600 hover:bg-violet-500 text-white' : 'bg-gray-800 text-gray-600 cursor-not-allowed'}`}
+            >
+              Analizar producto
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5-5 5M6 12h12" />
+              </svg>
+            </button>
           </div>
         </div>
       </form>
+
+      {/* Overlay de carga */}
+      {cargando && (
+        <div className="fixed inset-0 bg-gray-950/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center gap-6">
+          <div className="w-16 h-16 border-4 border-gray-800 border-t-violet-500 rounded-full animate-spin" />
+          <div className="text-center">
+            <p className="text-white text-lg font-medium">{mensajeCarga}</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {mensajeCarga === 'Analizando con IA...' ? 'Esto puede tardar ~20 segundos' : 'Por favor esperá...'}
+            </p>
+          </div>
+          <div className="flex gap-2 mt-2">
+            {['Subiendo imágenes...', 'Analizando con IA...'].map((paso, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-500 ${
+                  mensajeCarga === paso
+                    ? 'w-8 bg-violet-500'
+                    : mensajeCarga === 'Analizando con IA...' && i === 0
+                    ? 'w-4 bg-violet-800'
+                    : 'w-4 bg-gray-700'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
