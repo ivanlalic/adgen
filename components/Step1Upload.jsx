@@ -14,6 +14,7 @@ export default function Step1Upload({ onBack, onComplete }) {
   const [files, setFiles] = useState([])
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [sugerenciaAngulo, setSugerenciaAngulo] = useState('')
   const [cargando, setCargando] = useState(false)
   const [mensajeCarga, setMensajeCarga] = useState('')
   const [segundos, setSegundos] = useState(0)
@@ -50,6 +51,7 @@ export default function Step1Upload({ onBack, onComplete }) {
         body: JSON.stringify({
           nombre_producto: nombre.trim(),
           descripcion: descripcion.trim(),
+          sugerencia_angulo: sugerenciaAngulo.trim(),
           imagenes_urls: imagenesUrls,
         }),
       })
@@ -131,10 +133,27 @@ export default function Step1Upload({ onBack, onComplete }) {
                 <span className="text-xs text-gray-600 text-right">{descripcion.length}/500</span>
               </div>
 
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-gray-400">
+                  Sugerencia de ángulo <span className="text-gray-600 font-normal">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={sugerenciaAngulo}
+                  onChange={e => setSugerenciaAngulo(e.target.value)}
+                  placeholder="ej. jugadores de pádel, mamás primerizas, oficinistas..."
+                  maxLength={150}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition-all"
+                />
+              </div>
+
               <div className="flex gap-2.5 bg-gray-800/50 border border-gray-800 rounded-lg p-3 mt-auto">
                 <span className="text-violet-400 text-sm flex-shrink-0">✦</span>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  Claude analizará las fotos y generará <strong className="text-gray-400">5 ángulos de venta</strong> con copy listo. El análisis tarda ~20 seg.
+                  {sugerenciaAngulo.trim()
+                    ? <>Claude trabajará <strong className="text-gray-400">solo ese ángulo</strong> en profundidad: avatar, copy completo y dirección visual.</>
+                    : <>Sin sugerencia, Claude generará <strong className="text-gray-400">5 ángulos distintos</strong> para elegir. El análisis tarda ~20 seg.</>
+                  }
                 </p>
               </div>
             </div>

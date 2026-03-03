@@ -103,10 +103,13 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
         {/* Ángulos */}
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-gray-200">
-            5 ángulos de ataque
+            {angulos.length === 1 ? 'Ángulo de venta' : `${angulos.length} ángulos de ataque`}
           </h2>
           <p className="text-xs text-gray-500 mt-1">
-            Elegí el que mejor encaja con tu campaña. Podés volver y probar otro.
+            {angulos.length === 1
+              ? 'Ángulo trabajado en profundidad según tu sugerencia. Podés volver y probar otro.'
+              : 'Elegí el que mejor encaja con tu campaña. Podés volver y probar otro.'
+            }
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { parseClaudeJSON } from '@/lib/parseClaudeJSON'
-import { PROMPT_ANALYZE_SYSTEM, buildAnalyzeUserText } from '@/lib/prompts'
+import { PROMPT_ANALYZE_SYSTEM, PROMPT_ANALYZE_SINGLE_ANGLE_SYSTEM, buildAnalyzeUserText } from '@/lib/prompts'
 
 export const maxDuration = 60
 
@@ -51,12 +51,14 @@ export async function POST(request) {
       }))
     )
 
-    const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '')
+    const sugerencia = body.sugerencia_angulo?.trim() || ''
+    const systemPrompt = sugerencia ? PROMPT_ANALYZE_SINGLE_ANGLE_SYSTEM : PROMPT_ANALYZE_SYSTEM
+    const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '', sugerencia)
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 3000,
-      system: PROMPT_ANALYZE_SYSTEM,
+      system: systemPrompt,
       messages: [
         {
           role: 'user',
