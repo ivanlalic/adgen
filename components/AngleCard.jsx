@@ -1,0 +1,1 @@
+// AngleCard component — TODO: implementar

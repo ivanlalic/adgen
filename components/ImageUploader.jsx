@@ -1,0 +1,1 @@
+// ImageUploader component — TODO: implementar

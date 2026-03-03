@@ -1,0 +1,1 @@
+// TemplateCard component — TODO: implementar
