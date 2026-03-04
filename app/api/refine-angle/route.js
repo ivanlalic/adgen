@@ -16,7 +16,7 @@ async function urlToBase64(url) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { angulo_actual, edicion, imagenes_urls } = body
+    const { angulo_actual, edicion, imagenes_urls, imagenes_referencia } = body
 
     if (!angulo_actual || !edicion?.trim()) {
       return Response.json({ success: false, error: 'Faltan datos requeridos' }, { status: 400 })
@@ -31,6 +31,13 @@ export async function POST(request) {
         )
       : []
 
+    const refContents = imagenes_referencia?.length
+      ? imagenes_referencia.map(img => ({
+          type: 'image',
+          source: { type: 'base64', media_type: img.type || 'image/jpeg', data: img.data },
+        }))
+      : []
+
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 2000,
@@ -39,6 +46,7 @@ export async function POST(request) {
         role: 'user',
         content: [
           ...imageContents,
+          ...refContents,
           { type: 'text', text: buildRefineAngleUserText(angulo_actual, edicion) },
         ],
       }],

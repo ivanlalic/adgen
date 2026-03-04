@@ -18,6 +18,7 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
   const [refinando, setRefinando] = useState(false)
   const [errorRefine, setErrorRefine] = useState(null)
   const [editando, setEditando] = useState(false)
+  const [imagenesRef, setImagenesRef] = useState([])
 
   const doc = analisis?.product_document
 
@@ -33,6 +34,7 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
       setEditando(false)
       setTextoEdicion('')
       setErrorRefine(null)
+      setImagenesRef([])
     }
   }
 
@@ -49,6 +51,7 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
           angulo_actual: anguloActivo,
           edicion: textoEdicion,
           imagenes_urls: imagenesUrls || [],
+          imagenes_referencia: imagenesRef.map(img => ({ data: img.data, type: img.type })),
         }),
       })
 
@@ -60,11 +63,25 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
       setAnguloActivo(anguloRefinado)
       setEditando(false)
       setTextoEdicion('')
+      setImagenesRef([])
     } catch (err) {
       setErrorRefine(err.message)
     } finally {
       setRefinando(false)
     }
+  }
+
+  function handleImageRefChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result
+      const base64 = dataUrl.split(',')[1]
+      setImagenesRef(prev => [...prev, { preview: dataUrl, data: base64, type: file.type || 'image/jpeg' }])
+    }
+    reader.readAsDataURL(file)
   }
 
   return (
@@ -212,6 +229,34 @@ export default function Step2Angles({ analisis, nombreProducto, imagenesUrls, on
                   maxLength={400}
                   className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition-all"
                 />
+                {/* Imágenes de referencia */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Imagen de referencia visual (opcional)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {imagenesRef.map((img, i) => (
+                      <div key={i} className="relative">
+                        <img src={img.preview} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-700" />
+                        <button
+                          type="button"
+                          onClick={() => setImagenesRef(prev => prev.filter((_, j) => j !== i))}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 hover:bg-red-700 rounded-full text-xs flex items-center justify-center text-gray-300 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    {imagenesRef.length < 3 && (
+                      <label className="w-16 h-16 border border-dashed border-gray-700 hover:border-gray-500 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors gap-1">
+                        <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="text-[10px] text-gray-600">Imagen</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageRefChange} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs text-gray-600">{textoEdicion.length}/400</span>
                   <button

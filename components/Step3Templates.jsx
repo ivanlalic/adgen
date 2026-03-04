@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import TemplateCard from './TemplateCard'
 
-const SECCIONES = ['HERO', 'OFERTA', 'CARRUSEL', 'STORY', 'TESTIMONIAL']
+const SECCIONES_DEFAULT = ['HERO', 'OFERTA', 'CARRUSEL', 'STORY', 'TESTIMONIAL']
 
 const TRIGGER_BADGE = {
   'Pain/Problem':      { label: 'Dolor', color: 'bg-red-900/30 text-red-400 border-red-800/40' },
@@ -33,6 +33,15 @@ export default function Step3Templates({ session, onBack, onTemplateSeleccionado
   const [seleccionado, setSeleccionado] = useState(null)
   const [analizandoId, setAnalizandoId] = useState(null)
   const [errorAnalisis, setErrorAnalisis] = useState(null)
+
+  const [showUpload, setShowUpload] = useState(false)
+  const [uploadFile, setUploadFile] = useState(null)
+  const [uploadPreview, setUploadPreview] = useState(null)
+  const [uploadNombre, setUploadNombre] = useState('')
+  const [uploadSeccion, setUploadSeccion] = useState('HERO')
+  const [uploadSeccionCustom, setUploadSeccionCustom] = useState('')
+  const [subiendo, setSubiendo] = useState(false)
+  const [errorUpload, setErrorUpload] = useState(null)
 
   useEffect(() => {
     async function fetchTemplates() {
@@ -99,8 +108,55 @@ export default function Step3Templates({ session, onBack, onTemplateSeleccionado
     ? templates
     : templates.filter(t => t.seccion === filtro)
 
+  const seccionesEnTemplates = [...new Set(templates.map(t => t.seccion).filter(Boolean))]
+  const todasLasSecciones = [...new Set([...SECCIONES_DEFAULT, ...seccionesEnTemplates])]
+
   const trigger = anguloSeleccionado?.psychological_trigger
   const triggerInfo = TRIGGER_BADGE[trigger]
+
+  function handleUploadFileChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    e.target.value = ''
+    setUploadFile(file)
+    const reader = new FileReader()
+    reader.onload = () => setUploadPreview(reader.result)
+    reader.readAsDataURL(file)
+    if (!uploadNombre) setUploadNombre(file.name.replace(/\.[^.]+$/, ''))
+  }
+
+  async function handleSubirTemplate() {
+    if (!uploadFile || !uploadNombre.trim()) return
+    const seccionFinal = uploadSeccion === '__custom__'
+      ? uploadSeccionCustom.trim().toUpperCase()
+      : uploadSeccion
+    if (!seccionFinal) return
+
+    setSubiendo(true)
+    setErrorUpload(null)
+    const fd = new FormData()
+    fd.append('file', uploadFile)
+    fd.append('nombre', uploadNombre.trim())
+    fd.append('seccion', seccionFinal)
+
+    try {
+      const res = await fetch('/api/admin/upload-template', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error)
+      setTemplates(prev => [json.template, ...prev])
+      setSeleccionado(json.template)
+      setShowUpload(false)
+      setUploadFile(null)
+      setUploadPreview(null)
+      setUploadNombre('')
+      setUploadSeccion('HERO')
+      setUploadSeccionCustom('')
+    } catch (err) {
+      setErrorUpload(err.message)
+    } finally {
+      setSubiendo(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -151,9 +207,9 @@ export default function Step3Templates({ session, onBack, onTemplateSeleccionado
           </span>
         </div>
 
-        {/* Filtro de sección */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {['TODOS', ...SECCIONES].map(s => {
+        {/* Filtro de sección + botón subir */}
+        <div className="flex flex-wrap gap-2 mb-6 items-center">
+          {['TODOS', ...todasLasSecciones].map(s => {
             const count = s === 'TODOS' ? templates.length : templates.filter(t => t.seccion === s).length
             return (
               <button
@@ -174,7 +230,100 @@ export default function Step3Templates({ session, onBack, onTemplateSeleccionado
               </button>
             )
           })}
+          <button
+            onClick={() => setShowUpload(v => !v)}
+            className={`ml-auto flex items-center gap-1.5 text-xs font-medium px-3.5 py-1.5 rounded-full border transition-all ${
+              showUpload
+                ? 'bg-violet-700 border-violet-500 text-white'
+                : 'border-gray-700 text-gray-400 hover:border-violet-600 hover:text-violet-400'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Subir template
+          </button>
         </div>
+
+        {/* Panel de upload */}
+        {showUpload && (
+          <div className="mb-6 border border-gray-800 rounded-xl bg-gray-900 p-5">
+            <h3 className="text-sm font-semibold text-gray-200 mb-4">Subir nuevo template</h3>
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Dropzone */}
+              <label className={`flex-shrink-0 w-32 h-48 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden ${
+                uploadPreview ? 'border-gray-600' : 'border-gray-700 hover:border-gray-500'
+              }`}>
+                {uploadPreview ? (
+                  <img src={uploadPreview} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <svg className="w-8 h-8 text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs text-gray-600 text-center px-2">Seleccioná imagen</span>
+                  </>
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleUploadFileChange} />
+              </label>
+
+              {/* Campos */}
+              <div className="flex-1 flex flex-col gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Nombre del template</label>
+                  <input
+                    type="text"
+                    value={uploadNombre}
+                    onChange={e => setUploadNombre(e.target.value)}
+                    placeholder="ej. Hero dark minimalista"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Sección</label>
+                  <select
+                    value={uploadSeccion}
+                    onChange={e => setUploadSeccion(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500 transition-all"
+                  >
+                    {todasLasSecciones.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                    <option value="__custom__">+ Sección personalizada...</option>
+                  </select>
+                </div>
+                {uploadSeccion === '__custom__' && (
+                  <input
+                    type="text"
+                    value={uploadSeccionCustom}
+                    onChange={e => setUploadSeccionCustom(e.target.value)}
+                    placeholder="ej. REELS, FAQ, PRECIO..."
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 transition-all uppercase"
+                  />
+                )}
+                {errorUpload && (
+                  <p className="text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg px-3 py-2">
+                    {errorUpload}
+                  </p>
+                )}
+                <button
+                  onClick={handleSubirTemplate}
+                  disabled={!uploadFile || !uploadNombre.trim() || subiendo || (uploadSeccion === '__custom__' && !uploadSeccionCustom.trim())}
+                  className="self-start flex items-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2 rounded-lg transition-all"
+                >
+                  {subiendo ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Subiendo...
+                    </>
+                  ) : (
+                    'Subir y seleccionar'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error de carga */}
         {errorCarga && (
@@ -206,16 +355,27 @@ export default function Step3Templates({ session, onBack, onTemplateSeleccionado
 
         {/* Empty state */}
         {!loading && !errorCarga && templatesFiltrados.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
             <svg className="w-10 h-10 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <p className="text-sm text-gray-500">
               {filtro === 'TODOS'
-                ? 'No hay templates cargados. Subí algunos desde /admin.'
+                ? 'No hay templates cargados.'
                 : `No hay templates de tipo ${filtro} aún.`
               }
             </p>
+            {!showUpload && (
+              <button
+                onClick={() => setShowUpload(true)}
+                className="flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Subir tu primer template
+              </button>
+            )}
           </div>
         )}
 
