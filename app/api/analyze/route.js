@@ -57,7 +57,7 @@ export async function POST(request) {
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
+      max_tokens: sugerencia ? 4500 : 3000,
       system: systemPrompt,
       messages: [
         {
