@@ -72,9 +72,8 @@ export async function POST(request) {
     ]
 
     const geminiRes = await genai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-3.1-flash-image-preview',
       contents: [{ role: 'user', parts: geminiParts }],
-      config: { responseModalities: ['IMAGE', 'TEXT'] },
     })
 
     const candidates = geminiRes.candidates || []
