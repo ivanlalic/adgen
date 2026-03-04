@@ -44,22 +44,33 @@ export default function Step1Upload({ onBack, onComplete }) {
       setMensajeCarga('Subiendo imágenes...')
       const imagenesUrls = await uploadProductImages(files)
 
-      setMensajeCarga('ADGEN está analizando el producto y generando las mejores alternativas de venta...')
-      const res = await fetch('/api/analyze', {
+      setMensajeCarga('Analizando producto...')
+      const resAnalyze = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre_producto: nombre.trim(),
           descripcion: descripcion.trim(),
-          sugerencia_angulo: sugerenciaAngulo.trim(),
           imagenes_urls: imagenesUrls,
         }),
       })
+      const dataAnalyze = await resAnalyze.json()
+      if (!dataAnalyze.success) throw new Error(dataAnalyze.error || 'Error al analizar el producto')
 
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Error al analizar el producto')
+      setMensajeCarga('Generando ángulos de venta...')
+      const resAngles = await fetch('/api/angles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analisis: dataAnalyze.data,
+          sugerencia_angulo: sugerenciaAngulo.trim(),
+        }),
+      })
+      const dataAngles = await resAngles.json()
+      if (!dataAngles.success) throw new Error(dataAngles.error || 'Error al generar los ángulos')
 
-      onComplete(data.data, imagenesUrls, nombre.trim(), descripcion.trim())
+      const analisisCompleto = { ...dataAnalyze.data, ...dataAngles.data }
+      onComplete(analisisCompleto, imagenesUrls, nombre.trim(), descripcion.trim())
     } catch (err) {
       setError(err.message)
     } finally {
@@ -191,24 +202,26 @@ export default function Step1Upload({ onBack, onComplete }) {
           <div className="w-16 h-16 border-4 border-gray-800 border-t-violet-500 rounded-full animate-spin" />
           <div className="text-center">
             <p className="text-white text-lg font-medium">{mensajeCarga}</p>
-            <p className="text-gray-500 text-sm mt-1">
-              {mensajeCarga.startsWith('ADGEN') ? 'Esto puede tardar hasta 60 segundos' : 'Por favor esperá...'}
-            </p>
+            <p className="text-gray-500 text-sm mt-1">Por favor esperá...</p>
             <p className="text-violet-400 text-sm font-mono mt-2">{segundos}s</p>
           </div>
           <div className="flex gap-2 mt-2">
-            {['Subiendo imágenes...', 'ADGEN está analizando el producto y generando las mejores alternativas de venta...'].map((paso, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-500 ${
-                  mensajeCarga === paso
-                    ? 'w-8 bg-violet-500'
-                    : mensajeCarga.startsWith('ADGEN') && i === 0
-                    ? 'w-4 bg-violet-800'
-                    : 'w-4 bg-gray-700'
-                }`}
-              />
-            ))}
+            {['Subiendo imágenes...', 'Analizando producto...', 'Generando ángulos de venta...'].map((paso, i) => {
+              const pasos = ['Subiendo imágenes...', 'Analizando producto...', 'Generando ángulos de venta...']
+              const current = pasos.indexOf(mensajeCarga)
+              return (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-500 ${
+                    i === current
+                      ? 'w-8 bg-violet-500'
+                      : i < current
+                      ? 'w-4 bg-violet-800'
+                      : 'w-4 bg-gray-700'
+                  }`}
+                />
+              )
+            })}
           </div>
         </div>
       )}

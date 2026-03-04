@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { parseClaudeJSON } from '@/lib/parseClaudeJSON'
-import { PROMPT_ANALYZE_SYSTEM, PROMPT_ANALYZE_SINGLE_ANGLE_SYSTEM, buildAnalyzeUserText } from '@/lib/prompts'
+import { PROMPT_ANALYZE_VISUAL_SYSTEM, buildAnalyzeUserText } from '@/lib/prompts'
 
-export const maxDuration = 60
+export const maxDuration = 30
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -27,6 +27,12 @@ async function urlToBase64(url) {
   return Buffer.from(buffer).toString('base64')
 }
 
+function getMediaType(url) {
+  if (url.includes('.jpg') || url.includes('.jpeg')) return 'image/jpeg'
+  if (url.includes('.png')) return 'image/png'
+  return 'image/webp'
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
@@ -39,26 +45,23 @@ export async function POST(request) {
       )
     }
 
-    // Descargar imágenes y convertir a base64
     const imageContents = await Promise.all(
       body.imagenes_urls.map(async (url) => ({
         type: 'image',
         source: {
           type: 'base64',
-          media_type: 'image/webp',
+          media_type: getMediaType(url),
           data: await urlToBase64(url),
         },
       }))
     )
 
-    const sugerencia = body.sugerencia_angulo?.trim() || ''
-    const systemPrompt = sugerencia ? PROMPT_ANALYZE_SINGLE_ANGLE_SYSTEM : PROMPT_ANALYZE_SYSTEM
-    const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '', sugerencia)
+    const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '')
 
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: sugerencia ? 4500 : 3000,
-      system: systemPrompt,
+      max_tokens: 2000,
+      system: PROMPT_ANALYZE_VISUAL_SYSTEM,
       messages: [
         {
           role: 'user',
