@@ -137,14 +137,15 @@ export default function Step1Upload({ onBack, onComplete }) {
                 <label className="text-xs font-medium text-gray-400">
                   Sugerencia de ángulo <span className="text-gray-600 font-normal">(opcional)</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={sugerenciaAngulo}
                   onChange={e => setSugerenciaAngulo(e.target.value)}
-                  placeholder="ej. jugadores de pádel, mamás primerizas, oficinistas..."
-                  maxLength={150}
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition-all"
+                  placeholder="ej. jugadores de pádel amateur, trigger dolor, avatar 30-55 años con dolor de talón..."
+                  rows={3}
+                  maxLength={500}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 transition-all"
                 />
+                <span className="text-xs text-gray-600 text-right">{sugerenciaAngulo.length}/500</span>
               </div>
 
               <div className="flex gap-2.5 bg-gray-800/50 border border-gray-800 rounded-lg p-3 mt-auto">
