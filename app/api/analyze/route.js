@@ -56,7 +56,7 @@ export async function POST(request) {
     const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '', sugerencia)
 
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: sugerencia ? 4500 : 3000,
       system: systemPrompt,
       messages: [
