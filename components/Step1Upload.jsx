@@ -44,7 +44,7 @@ export default function Step1Upload({ onBack, onComplete }) {
       setMensajeCarga('Subiendo imágenes...')
       const imagenesUrls = await uploadProductImages(files)
 
-      setMensajeCarga('Analizando con IA...')
+      setMensajeCarga('ADGEN está analizando el producto y generando las mejores alternativas de venta...')
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,18 +192,18 @@ export default function Step1Upload({ onBack, onComplete }) {
           <div className="text-center">
             <p className="text-white text-lg font-medium">{mensajeCarga}</p>
             <p className="text-gray-500 text-sm mt-1">
-              {mensajeCarga === 'Analizando con IA...' ? 'Esto puede tardar hasta 60 segundos' : 'Por favor esperá...'}
+              {mensajeCarga.startsWith('ADGEN') ? 'Esto puede tardar hasta 60 segundos' : 'Por favor esperá...'}
             </p>
             <p className="text-violet-400 text-sm font-mono mt-2">{segundos}s</p>
           </div>
           <div className="flex gap-2 mt-2">
-            {['Subiendo imágenes...', 'Analizando con IA...'].map((paso, i) => (
+            {['Subiendo imágenes...', 'ADGEN está analizando el producto y generando las mejores alternativas de venta...'].map((paso, i) => (
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-500 ${
                   mensajeCarga === paso
                     ? 'w-8 bg-violet-500'
-                    : mensajeCarga === 'Analizando con IA...' && i === 0
+                    : mensajeCarga.startsWith('ADGEN') && i === 0
                     ? 'w-4 bg-violet-800'
                     : 'w-4 bg-gray-700'
                 }`}
