@@ -23,7 +23,7 @@ const SECCION_COLORS = {
  *   onNuevaCampania: () => void
  */
 export default function Step4Generate({ session, onBack, onNuevaCampania }) {
-  const { nombreProducto, descripcion, imagenesUrls, anguloSeleccionado: angulo, templateSeleccionado: template } = session
+  const { nombreProducto, descripcion, imagenesUrls, anguloSeleccionado: angulo, templateSeleccionado: template, productoId } = session
 
   const [estado, setEstado] = useState('idle') // idle | loading | done | error
   const [imagenUrl, setImagenUrl] = useState(null)
@@ -69,6 +69,7 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
           imagenesUrls,
           angulo,
           template,
+          producto_id: productoId || null,
         }),
       })
 

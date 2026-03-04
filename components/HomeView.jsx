@@ -6,7 +6,7 @@
  *   productos: array de productos analizados en la sesión
  *   onNuevoProducto: () => void
  */
-export default function HomeView({ productos = [], onNuevoProducto, onSelectProducto, onEliminarProducto }) {
+export default function HomeView({ productos = [], loading = false, onNuevoProducto, onSelectProducto, onEliminarProducto }) {
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
@@ -29,7 +29,19 @@ export default function HomeView({ productos = [], onNuevoProducto, onSelectProd
       </header>
 
       <main className="flex-1 px-6 py-8 max-w-6xl mx-auto w-full">
-        {productos.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-video bg-gray-800" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3.5 bg-gray-800 rounded w-3/4" />
+                  <div className="h-3 bg-gray-800 rounded w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : productos.length === 0 ? (
           <EmptyState onNuevoProducto={onNuevoProducto} />
         ) : (
           <>
@@ -129,6 +141,11 @@ function ProductCard({ producto, onSelect, onEliminar }) {
             <span className="text-xs text-violet-400 bg-violet-900/20 border border-violet-800/30 px-2 py-0.5 rounded-full">
               {producto.analisis?.sales_angles?.length || 0} ángulos
             </span>
+            {producto.generaciones?.[0]?.count > 0 && (
+              <span className="text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-800/30 px-2 py-0.5 rounded-full">
+                {producto.generaciones[0].count} ad{producto.generaciones[0].count !== 1 ? 's' : ''}
+              </span>
+            )}
             {producto.analisis?.product_document?.price_positioning && (
               <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full capitalize">
                 {producto.analisis.product_document.price_positioning}

@@ -23,7 +23,7 @@ async function urlToBase64(url) {
  */
 export async function POST(request) {
   try {
-    const { nombreProducto, descripcion, imagenesUrls, angulo, template } = await request.json()
+    const { nombreProducto, descripcion, imagenesUrls, angulo, template, producto_id } = await request.json()
 
     if (!angulo || !template?.style_guide) {
       return Response.json(
@@ -118,6 +118,17 @@ export async function POST(request) {
     const { data: { publicUrl } } = serviceClient.storage
       .from('generadas')
       .getPublicUrl(uploadData.path)
+
+    // ── STEP 4: Guardar generacion en DB ───────────────────────────────────
+    if (producto_id) {
+      await serviceClient.from('generaciones').insert({
+        producto_id,
+        angulo,
+        template_id: template.id || null,
+        imagen_url: publicUrl,
+        gemini_prompt: geminiPrompt,
+      })
+    }
 
     return Response.json({ success: true, imagen_url: publicUrl, gemini_prompt: geminiPrompt })
   } catch (err) {

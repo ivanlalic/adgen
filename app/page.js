@@ -12,17 +12,10 @@ import Step4Generate from '@/components/Step4Generate'
  */
 export default function Home() {
   const [paso, setPaso] = useState('home')
-  const [productos, setProductos] = useState(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const saved = localStorage.getItem('adgen_productos')
-      if (!saved) return []
-      return JSON.parse(saved).map(p => ({ ...p, createdAt: new Date(p.createdAt) }))
-    } catch {
-      return []
-    }
-  })
+  const [productos, setProductos] = useState([])
+  const [loadingProductos, setLoadingProductos] = useState(true)
   const [session, setSession] = useState({
+    productoId: null,
     imagenesUrls: [],
     nombreProducto: '',
     descripcion: '',
@@ -33,13 +26,24 @@ export default function Home() {
   })
 
   useEffect(() => {
+    fetchProductos()
+  }, [])
+
+  async function fetchProductos() {
+    setLoadingProductos(true)
     try {
-      localStorage.setItem('adgen_productos', JSON.stringify(productos))
+      const res = await fetch('/api/productos')
+      const json = await res.json()
+      if (json.success) {
+        setProductos(json.productos.map(p => ({ ...p, createdAt: new Date(p.created_at) })))
+      }
     } catch {}
-  }, [productos])
+    finally { setLoadingProductos(false) }
+  }
 
   function iniciarNuevoProducto() {
     setSession({
+      productoId: null,
       imagenesUrls: [],
       nombreProducto: '',
       descripcion: '',
@@ -53,7 +57,8 @@ export default function Home() {
 
   function onSelectProducto(producto) {
     setSession({
-      imagenesUrls: producto.imagenesUrls || [],
+      productoId: producto.id,
+      imagenesUrls: producto.imagenes_urls || [],
       nombreProducto: producto.nombre,
       descripcion: producto.descripcion || '',
       analisisCompleto: producto.analisis,
@@ -64,17 +69,37 @@ export default function Home() {
     setPaso('analysis')
   }
 
-  function onEliminarProducto(id) {
+  async function onEliminarProducto(id) {
     setProductos(prev => prev.filter(p => p.id !== id))
+    try {
+      await fetch(`/api/productos/${id}`, { method: 'DELETE' })
+    } catch {}
   }
 
-  function onAnalisisCompleto(analisis, imagenesUrls, nombre, descripcion) {
+  async function onAnalisisCompleto(analisis, imagenesUrls, nombre, descripcion) {
     setSession(prev => ({ ...prev, analisisCompleto: analisis, imagenesUrls, nombreProducto: nombre, descripcion }))
-    setProductos(prev => [
-      { id: Date.now(), nombre, imagenUrl: imagenesUrls[0] || null, imagenesUrls, descripcion, analisis, createdAt: new Date() },
-      ...prev,
-    ])
     setPaso('analysis')
+
+    // Guardar en Supabase
+    try {
+      const res = await fetch('/api/productos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre,
+          descripcion,
+          imagen_url: imagenesUrls[0] || null,
+          imagenes_urls: imagenesUrls,
+          analisis,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        const nuevo = { ...json.producto, createdAt: new Date(json.producto.created_at) }
+        setProductos(prev => [nuevo, ...prev])
+        setSession(prev => ({ ...prev, productoId: json.producto.id }))
+      }
+    } catch {}
   }
 
   function onAnguloSeleccionado(angulo) {
@@ -91,6 +116,7 @@ export default function Home() {
     return (
       <HomeView
         productos={productos}
+        loading={loadingProductos}
         onNuevoProducto={iniciarNuevoProducto}
         onSelectProducto={onSelectProducto}
         onEliminarProducto={onEliminarProducto}
