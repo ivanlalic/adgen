@@ -54,7 +54,7 @@ export async function POST(request) {
     ]
 
     const claudeRes = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: 'user', content: claudeUserParts }],
@@ -74,6 +74,16 @@ export async function POST(request) {
     const geminiRes = await genai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
       contents: [{ role: 'user', parts: geminiParts }],
+      config: {
+        imageConfig: {
+          aspectRatio: '9:16',
+          imageSize: '1K',
+        },
+        thinkingConfig: {
+          thinkingLevel: 'high',
+        },
+        tools: [{ googleSearch: {} }],
+      },
     })
 
     const candidates = geminiRes.candidates || []
