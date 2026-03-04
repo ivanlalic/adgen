@@ -1,8 +1,93 @@
-// POST /api/analyze-template
-// Claude: extrae style guide de template nuevo subido por el usuario
-// TODO: implementar
-export const maxDuration = 60;
+import Anthropic from '@anthropic-ai/sdk'
+import { getServiceClient } from '@/lib/supabase'
+import { PROMPT_ANALYZE_TEMPLATE_SYSTEM } from '@/lib/prompts'
 
+export const maxDuration = 60
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+async function urlToBase64(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`No se pudo descargar la imagen del template: ${url}`)
+  const buffer = await res.arrayBuffer()
+  return Buffer.from(buffer).toString('base64')
+}
+
+function getMediaType(url) {
+  const ext = url.split('.').pop()?.toLowerCase()
+  const map = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
+  return map[ext] || 'image/jpeg'
+}
+
+// POST { template_id }
+// Returns style_guide — uses cached version if already analyzed
 export async function POST(request) {
-  return Response.json({ success: false, error: 'Not implemented yet' }, { status: 501 });
+  try {
+    const body = await request.json()
+    const { template_id } = body
+
+    if (!template_id) {
+      return Response.json({ success: false, error: 'template_id requerido' }, { status: 400 })
+    }
+
+    const serviceClient = getServiceClient()
+
+    // Fetch template from DB
+    const { data: template, error: fetchError } = await serviceClient
+      .from('templates')
+      .select('id, nombre, imagen_url, style_guide')
+      .eq('id', template_id)
+      .single()
+
+    if (fetchError || !template) {
+      return Response.json({ success: false, error: 'Template no encontrado' }, { status: 404 })
+    }
+
+    // Cache hit — return existing style guide
+    if (template.style_guide) {
+      return Response.json({ success: true, style_guide: template.style_guide, cached: true })
+    }
+
+    // Cache miss — run Claude analysis
+    const imageBase64 = await urlToBase64(template.imagen_url)
+    const mediaType = getMediaType(template.imagen_url)
+
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
+      system: PROMPT_ANALYZE_TEMPLATE_SYSTEM,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: imageBase64 },
+          },
+          { type: 'text', text: `Analyze this ad template: "${template.nombre}"` },
+        ],
+      }],
+    })
+
+    const styleGuide = response.content[0]?.text
+    if (!styleGuide) throw new Error('Claude no devolvió respuesta')
+
+    // Save to DB (cache for next use)
+    await serviceClient
+      .from('templates')
+      .update({ style_guide: styleGuide })
+      .eq('id', template_id)
+
+    return Response.json({ success: true, style_guide: styleGuide, cached: false })
+  } catch (err) {
+    console.error('[/api/analyze-template] Error:', err)
+
+    if (err.status === 429) {
+      return Response.json(
+        { success: false, error: 'Rate limit de Claude. Esperá unos segundos.', code: 'RATE_LIMIT' },
+        { status: 429 }
+      )
+    }
+
+    return Response.json({ success: false, error: err.message }, { status: 500 })
+  }
 }
