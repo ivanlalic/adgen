@@ -17,11 +17,12 @@ export default function ImageUploader({ files = [], onChange }) {
   const inputRefs = [useRef(null), useRef(null), useRef(null)]
 
   function handleFileChange(index, e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    // Rebuild sparse array preserving positions
+    const selected = Array.from(e.target.files || [])
+    if (!selected.length) return
     const next = [files[0] || null, files[1] || null, files[2] || null]
-    next[index] = file
+    selected.slice(0, 3 - index).forEach((file, i) => {
+      next[index + i] = file
+    })
     onChange(next.filter(Boolean))
     e.target.value = ''
   }
@@ -89,6 +90,7 @@ export default function ImageUploader({ files = [], onChange }) {
               ref={inputRefs[i]}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(e) => handleFileChange(i, e)}
             />
