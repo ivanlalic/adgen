@@ -4,6 +4,7 @@ import HomeView from '@/components/HomeView'
 import Step1Upload from '@/components/Step1Upload'
 import Step2Angles from '@/components/Step2Angles'
 import Step3Templates from '@/components/Step3Templates'
+import Step4Generate from '@/components/Step4Generate'
 
 /**
  * page.js — Orquestador principal del stepper.
@@ -90,26 +91,12 @@ export default function Home() {
   }
 
   if (paso === 'generate') {
-    // Step4Generate — placeholder hasta que se implemente
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center gap-4">
-        <div className="text-center max-w-sm px-6">
-          <p className="text-violet-400 text-4xl mb-4">✦</p>
-          <h2 className="text-xl font-semibold mb-2">Paso 4 · Generar</h2>
-          <p className="text-gray-500 text-sm mb-2">
-            Template: <strong className="text-gray-300">{session.templateSeleccionado?.nombre}</strong>
-          </p>
-          <p className="text-gray-500 text-sm mb-6">
-            Ángulo: <strong className="text-gray-300">{session.anguloSeleccionado?.angle_name}</strong>
-          </p>
-          <button
-            onClick={() => setPaso('templates')}
-            className="text-sm text-violet-400 hover:text-violet-300 underline underline-offset-2"
-          >
-            ← Volver a templates
-          </button>
-        </div>
-      </div>
+      <Step4Generate
+        session={session}
+        onBack={() => setPaso('templates')}
+        onNuevaCampania={iniciarNuevoProducto}
+      />
     )
   }
 
