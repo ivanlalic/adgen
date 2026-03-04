@@ -6,7 +6,7 @@
  *   productos: array de productos analizados en la sesión
  *   onNuevoProducto: () => void
  */
-export default function HomeView({ productos = [], onNuevoProducto }) {
+export default function HomeView({ productos = [], onNuevoProducto, onSelectProducto, onEliminarProducto }) {
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
       <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
@@ -39,7 +39,14 @@ export default function HomeView({ productos = [], onNuevoProducto }) {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {productos.map(p => <ProductCard key={p.id} producto={p} />)}
+              {productos.map(p => (
+                <ProductCard
+                  key={p.id}
+                  producto={p}
+                  onSelect={() => onSelectProducto(p)}
+                  onEliminar={() => onEliminarProducto(p.id)}
+                />
+              ))}
             </div>
           </>
         )}
@@ -87,38 +94,52 @@ function EmptyState({ onNuevoProducto }) {
   )
 }
 
-function ProductCard({ producto }) {
+function ProductCard({ producto, onSelect, onEliminar }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group">
-      <div className="aspect-video bg-gray-800 overflow-hidden">
-        {producto.imagenUrl ? (
-          <img
-            src={producto.imagenUrl}
-            alt={producto.nombre}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-gray-700 text-2xl">📦</span>
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-medium text-gray-100 text-sm truncate">{producto.nombre}</h3>
-        <p className="text-gray-600 text-xs mt-1">
-          {producto.createdAt?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-        </p>
-        <div className="mt-3 flex gap-2 flex-wrap">
-          <span className="text-xs text-violet-400 bg-violet-900/20 border border-violet-800/30 px-2 py-0.5 rounded-full">
-            {producto.analisis?.sales_angles?.length || 0} ángulos
-          </span>
-          {producto.analisis?.product_document?.price_positioning && (
-            <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full capitalize">
-              {producto.analisis.product_document.price_positioning}
-            </span>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-gray-700 transition-colors group relative">
+      {/* Botón eliminar */}
+      <button
+        onClick={e => { e.stopPropagation(); onEliminar() }}
+        className="absolute top-2 right-2 z-10 w-6 h-6 bg-gray-800/80 hover:bg-red-700 rounded-full text-gray-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all text-xs"
+        title="Eliminar"
+      >
+        ×
+      </button>
+
+      <button onClick={onSelect} className="w-full text-left">
+        <div className="aspect-video bg-gray-800 overflow-hidden">
+          {producto.imagenUrl ? (
+            <img
+              src={producto.imagenUrl}
+              alt={producto.nombre}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-gray-700 text-2xl">📦</span>
+            </div>
           )}
         </div>
-      </div>
+        <div className="p-4">
+          <h3 className="font-medium text-gray-100 text-sm truncate">{producto.nombre}</h3>
+          <p className="text-gray-600 text-xs mt-1">
+            {producto.createdAt?.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+          </p>
+          <div className="mt-3 flex gap-2 flex-wrap">
+            <span className="text-xs text-violet-400 bg-violet-900/20 border border-violet-800/30 px-2 py-0.5 rounded-full">
+              {producto.analisis?.sales_angles?.length || 0} ángulos
+            </span>
+            {producto.analisis?.product_document?.price_positioning && (
+              <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full capitalize">
+                {producto.analisis.product_document.price_positioning}
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-violet-500 group-hover:text-violet-400 transition-colors font-medium">
+            Retomar →
+          </p>
+        </div>
+      </button>
     </div>
   )
 }

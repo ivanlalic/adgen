@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import HomeView from '@/components/HomeView'
 import Step1Upload from '@/components/Step1Upload'
 import Step2Angles from '@/components/Step2Angles'
@@ -12,7 +12,16 @@ import Step4Generate from '@/components/Step4Generate'
  */
 export default function Home() {
   const [paso, setPaso] = useState('home')
-  const [productos, setProductos] = useState([])
+  const [productos, setProductos] = useState(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem('adgen_productos')
+      if (!saved) return []
+      return JSON.parse(saved).map(p => ({ ...p, createdAt: new Date(p.createdAt) }))
+    } catch {
+      return []
+    }
+  })
   const [session, setSession] = useState({
     imagenesUrls: [],
     nombreProducto: '',
@@ -22,6 +31,12 @@ export default function Home() {
     templateSeleccionado: null,
     imagenGeneradaUrl: null,
   })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('adgen_productos', JSON.stringify(productos))
+    } catch {}
+  }, [productos])
 
   function iniciarNuevoProducto() {
     setSession({
@@ -36,10 +51,27 @@ export default function Home() {
     setPaso('upload')
   }
 
+  function onSelectProducto(producto) {
+    setSession({
+      imagenesUrls: producto.imagenesUrls || [],
+      nombreProducto: producto.nombre,
+      descripcion: producto.descripcion || '',
+      analisisCompleto: producto.analisis,
+      anguloSeleccionado: null,
+      templateSeleccionado: null,
+      imagenGeneradaUrl: null,
+    })
+    setPaso('analysis')
+  }
+
+  function onEliminarProducto(id) {
+    setProductos(prev => prev.filter(p => p.id !== id))
+  }
+
   function onAnalisisCompleto(analisis, imagenesUrls, nombre, descripcion) {
     setSession(prev => ({ ...prev, analisisCompleto: analisis, imagenesUrls, nombreProducto: nombre, descripcion }))
     setProductos(prev => [
-      { id: Date.now(), nombre, imagenUrl: imagenesUrls[0] || null, analisis, createdAt: new Date() },
+      { id: Date.now(), nombre, imagenUrl: imagenesUrls[0] || null, imagenesUrls, descripcion, analisis, createdAt: new Date() },
       ...prev,
     ])
     setPaso('analysis')
@@ -56,7 +88,14 @@ export default function Home() {
   }
 
   if (paso === 'home') {
-    return <HomeView productos={productos} onNuevoProducto={iniciarNuevoProducto} />
+    return (
+      <HomeView
+        productos={productos}
+        onNuevoProducto={iniciarNuevoProducto}
+        onSelectProducto={onSelectProducto}
+        onEliminarProducto={onEliminarProducto}
+      />
+    )
   }
 
   if (paso === 'upload') {
