@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase-browser'
 import HomeView from '@/components/HomeView'
 import Step1Upload from '@/components/Step1Upload'
 import Step2Angles from '@/components/Step2Angles'
@@ -12,6 +13,7 @@ import Step4Generate from '@/components/Step4Generate'
  */
 export default function Home() {
   const [paso, setPaso] = useState('home')
+  const [user, setUser] = useState(null)
   const [productos, setProductos] = useState([])
   const [loadingProductos, setLoadingProductos] = useState(true)
   const [session, setSession] = useState({
@@ -25,7 +27,10 @@ export default function Home() {
     imagenGeneradaUrl: null,
   })
 
+  const supabase = createClient()
+
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
     fetchProductos()
   }, [])
 
@@ -39,6 +44,11 @@ export default function Home() {
       }
     } catch {}
     finally { setLoadingProductos(false) }
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    window.location.href = '/auth'
   }
 
   function iniciarNuevoProducto() {
@@ -80,7 +90,6 @@ export default function Home() {
     setSession(prev => ({ ...prev, analisisCompleto: analisis, imagenesUrls, nombreProducto: nombre, descripcion }))
     setPaso('analysis')
 
-    // Guardar en Supabase
     try {
       const res = await fetch('/api/productos', {
         method: 'POST',
@@ -115,11 +124,13 @@ export default function Home() {
   if (paso === 'home') {
     return (
       <HomeView
+        user={user}
         productos={productos}
         loading={loadingProductos}
         onNuevoProducto={iniciarNuevoProducto}
         onSelectProducto={onSelectProducto}
         onEliminarProducto={onEliminarProducto}
+        onLogout={handleLogout}
       />
     )
   }

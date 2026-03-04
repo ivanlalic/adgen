@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenAI } from '@google/genai'
 import { getServiceClient } from '@/lib/supabase'
+import { getUser } from '@/lib/auth-server'
 import { buildGenerateSystemPrompt } from '@/lib/prompts'
 
 export const maxDuration = 120
@@ -23,6 +24,9 @@ async function urlToBase64(url) {
  */
 export async function POST(request) {
   try {
+    const user = await getUser()
+    if (!user) return Response.json({ success: false, error: 'No autorizado' }, { status: 401 })
+
     const { nombreProducto, descripcion, imagenesUrls, angulo, template, producto_id } = await request.json()
 
     if (!angulo || !template?.style_guide) {

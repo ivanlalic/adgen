@@ -6,10 +6,10 @@
  *   productos: array de productos analizados en la sesión
  *   onNuevoProducto: () => void
  */
-export default function HomeView({ productos = [], loading = false, onNuevoProducto, onSelectProducto, onEliminarProducto }) {
+export default function HomeView({ user, productos = [], loading = false, onNuevoProducto, onSelectProducto, onEliminarProducto, onLogout }) {
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-violet-400 text-lg">✦</span>
@@ -17,15 +17,30 @@ export default function HomeView({ productos = [], loading = false, onNuevoProdu
           </div>
           <p className="text-xs text-gray-600 mt-0.5">Generador de anuncios con IA</p>
         </div>
-        <button
-          onClick={onNuevoProducto}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo producto
-        </button>
+        <div className="flex items-center gap-3">
+          {user && (
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs text-gray-500 hidden sm:block truncate max-w-[160px]">
+                {user.email}
+              </span>
+              <button
+                onClick={onLogout}
+                className="text-xs text-gray-500 hover:text-gray-300 border border-gray-800 hover:border-gray-700 px-3 py-1.5 rounded-lg transition-all"
+              >
+                Salir
+              </button>
+            </div>
+          )}
+          <button
+            onClick={onNuevoProducto}
+            className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo producto
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 px-6 py-8 max-w-6xl mx-auto w-full">
