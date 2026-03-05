@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getServiceClient } from '@/lib/supabase'
 import { PROMPT_ANALYZE_TEMPLATE_SYSTEM } from '@/lib/prompts'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

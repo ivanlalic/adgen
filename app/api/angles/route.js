@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { parseClaudeJSON } from '@/lib/parseClaudeJSON'
 import { PROMPT_ANGLES_SYSTEM, PROMPT_ANGLES_SINGLE_SYSTEM, buildAnglesUserText } from '@/lib/prompts'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
