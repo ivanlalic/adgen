@@ -116,8 +116,6 @@ RULES:
       contents: [{ role: 'user', parts: geminiParts }],
       config: {
         imageConfig: { aspectRatio: '9:16', imageSize: '1K' },
-        thinkingConfig: { thinkingLevel: 'high' },
-        tools: [{ googleSearch: {} }],
       },
     })
 

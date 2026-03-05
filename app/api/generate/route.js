@@ -79,14 +79,7 @@ export async function POST(request) {
       model: 'gemini-3.1-flash-image-preview',
       contents: [{ role: 'user', parts: geminiParts }],
       config: {
-        imageConfig: {
-          aspectRatio: '9:16',
-          imageSize: '1K',
-        },
-        thinkingConfig: {
-          thinkingLevel: 'high',
-        },
-        tools: [{ googleSearch: {} }],
+        imageConfig: { aspectRatio: '9:16', imageSize: '1K' },
       },
     })
 
