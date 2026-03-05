@@ -117,15 +117,21 @@ export async function POST(request) {
       .from('generadas')
       .getPublicUrl(uploadData.path)
 
-    // ── STEP 4: Guardar generacion en DB ───────────────────────────────────
+    // ── STEP 4: Guardar generacion en DB + guardar ángulo en producto ─────
     if (producto_id) {
-      await serviceClient.from('generaciones').insert({
-        producto_id,
-        angulo,
-        template_id: template.id || null,
-        imagen_url: publicUrl,
-        gemini_prompt: geminiPrompt,
-      })
+      await Promise.all([
+        serviceClient.from('generaciones').insert({
+          producto_id,
+          angulo,
+          template_id: template.id || null,
+          imagen_url: publicUrl,
+          gemini_prompt: geminiPrompt,
+          section_type: 'hero',
+          section_order: 0,
+        }),
+        // Persist the selected angle on the producto so generate-section can use it
+        serviceClient.from('productos').update({ angle_seleccionado: angulo }).eq('id', producto_id),
+      ])
     }
 
     return Response.json({ success: true, imagen_url: publicUrl, gemini_prompt: geminiPrompt })
