@@ -135,9 +135,9 @@ function ProductCard({ producto, onSelect, onEliminar }) {
 
       <button onClick={onSelect} className="w-full text-left">
         <div className="aspect-video bg-gray-800 overflow-hidden">
-          {producto.imagenUrl ? (
+          {(producto.imagen_url || producto.imagenes_urls?.[0]) ? (
             <img
-              src={producto.imagenUrl}
+              src={producto.imagen_url || producto.imagenes_urls[0]}
               alt={producto.nombre}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
