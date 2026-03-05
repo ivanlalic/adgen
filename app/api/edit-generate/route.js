@@ -94,12 +94,10 @@ RULES:
     ]
 
     const geminiRes = await genai.models.generateContent({
-      model: 'gemini-3.1-flash-image-preview',
+      model: 'gemini-2.0-flash-preview-image-generation',
       contents: [{ role: 'user', parts: geminiParts }],
       config: {
-        imageConfig: { aspectRatio: '9:16', imageSize: '1K' },
-        thinkingConfig: { thinkingLevel: 'high' },
-        tools: [{ googleSearch: {} }],
+        responseModalities: ['Text', 'Image'],
       },
     })
 
