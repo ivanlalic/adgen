@@ -29,7 +29,7 @@ function groupBySec(generaciones) {
  * ProductGeneraciones — galería de imágenes de un producto agrupadas por sección.
  * Incluye edición inline con imágenes de referencia + historial de versiones por card.
  */
-export default function ProductGeneraciones({ producto, generaciones: generacionesInit, onBack, onGenerarNuevo, onEliminar }) {
+export default function ProductGeneraciones({ producto, generaciones: generacionesInit, loading = false, onBack, onGenerarNuevo, onEliminar }) {
   // Local copy so we can update image_url / version_history in-place after edits
   const [generaciones, setGeneraciones] = useState(generacionesInit)
 
@@ -109,7 +109,7 @@ export default function ProductGeneraciones({ producto, generaciones: generacion
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-semibold truncate">{producto.nombre}</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            {totalAds > 0 ? `${totalAds} ad${totalAds !== 1 ? 's' : ''} generado${totalAds !== 1 ? 's' : ''}` : 'Sin ads generados'}
+            {loading ? 'Cargando...' : totalAds > 0 ? `${totalAds} ad${totalAds !== 1 ? 's' : ''} generado${totalAds !== 1 ? 's' : ''}` : 'Sin ads generados'}
           </p>
         </div>
         <button
@@ -125,7 +125,9 @@ export default function ProductGeneraciones({ producto, generaciones: generacion
 
       <div className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
 
-        {totalAds === 0 ? (
+        {loading ? (
+          <SkeletonGaleria />
+        ) : totalAds === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="w-16 h-16 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center mb-5">
               <svg className="w-8 h-8 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,6 +224,35 @@ export default function ProductGeneraciones({ producto, generaciones: generacion
           }}
         />
       )}
+    </div>
+  )
+}
+
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+function SkeletonGaleria() {
+  return (
+    <div className="flex flex-col gap-12">
+      {[0, 1].map(g => (
+        <div key={g}>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-gray-800" />
+            <div className="h-5 w-24 bg-gray-800 rounded-full animate-pulse" />
+            <div className="flex-1 h-px bg-gray-800" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: g === 0 ? 3 : 2 }).map((_, i) => (
+              <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden animate-pulse">
+                <div className="aspect-[9/16] bg-gray-800" />
+                <div className="p-2 space-y-1.5">
+                  <div className="h-2.5 bg-gray-800 rounded w-3/4" />
+                  <div className="h-2 bg-gray-800 rounded w-1/2" />
+                </div>
+                <div className="border-t border-gray-800 p-2 h-8 bg-gray-900" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

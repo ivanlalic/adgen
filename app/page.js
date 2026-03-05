@@ -17,7 +17,8 @@ export default function Home() {
   const [user, setUser] = useState(null)
   const [productos, setProductos] = useState([])
   const [loadingProductos, setLoadingProductos] = useState(true)
-  const [productoActivo, setProductoActivo] = useState(null) // producto con generaciones cargadas
+  const [productoActivo, setProductoActivo] = useState(null)
+  const [loadingGeneraciones, setLoadingGeneraciones] = useState(false)
   const [session, setSession] = useState({
     productoId: null,
     imagenesUrls: [],
@@ -68,19 +69,38 @@ export default function Home() {
   }
 
   async function onSelectProducto(producto) {
-    // Cargar el producto con sus generaciones y mostrar la vista de galería
+    // Fix #3: mostrar galería de inmediato con skeleton, sin pantalla en blanco
+    setProductoActivo({ ...producto, generaciones: [] })
+    setLoadingGeneraciones(true)
+    setPaso('generaciones')
     try {
       const res = await fetch(`/api/productos/${producto.id}`)
       const json = await res.json()
+      if (json.success) setProductoActivo(json.producto)
+    } catch {}
+    setLoadingGeneraciones(false)
+  }
+
+  // Fix #1 + #2: volver a la galería del producto y refrescar contadores
+  async function volverAGaleriaYRefrescar() {
+    const productoId = session.productoId || productoActivo?.id
+    if (!productoId) { setPaso('home'); return }
+
+    setLoadingGeneraciones(true)
+    setPaso('generaciones')
+    try {
+      const res = await fetch(`/api/productos/${productoId}`)
+      const json = await res.json()
       if (json.success) {
         setProductoActivo(json.producto)
-      } else {
-        setProductoActivo({ ...producto, generaciones: [] })
+        // Actualizar contador de ads en la lista del home
+        const newCount = json.producto.generaciones?.length || 0
+        setProductos(prev => prev.map(p =>
+          p.id === productoId ? { ...p, generaciones: [{ count: newCount }] } : p
+        ))
       }
-    } catch {
-      setProductoActivo({ ...producto, generaciones: [] })
-    }
-    setPaso('generaciones')
+    } catch {}
+    setLoadingGeneraciones(false)
   }
 
   function onGenerarNuevoParaProducto(producto) {
@@ -196,7 +216,7 @@ export default function Home() {
       <Step4Generate
         session={session}
         onBack={() => setPaso('templates')}
-        onNuevaCampania={iniciarNuevoProducto}
+        onNuevaCampania={volverAGaleriaYRefrescar}
       />
     )
   }
@@ -206,6 +226,7 @@ export default function Home() {
       <ProductGeneraciones
         producto={productoActivo}
         generaciones={productoActivo.generaciones || []}
+        loading={loadingGeneraciones}
         onBack={() => setPaso('home')}
         onGenerarNuevo={() => onGenerarNuevoParaProducto(productoActivo)}
         onEliminar={onEliminarGeneracion}
