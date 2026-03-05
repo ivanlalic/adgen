@@ -55,11 +55,10 @@ export async function POST(request, { params }) {
     const imagenesUrls = gen.productos.imagenes_urls || []
     const seccion = gen.templates?.seccion || 'edit'
 
-    // ── STEP 1: Claude reescribe el prompt ───────────────────────────────────
+    // ── STEP 1+2 en paralelo: Claude reescribe prompt + descarga fotos ───────
     const hasRefImages = referenceImages.length > 0
 
     const claudeUserParts = [
-      // Reference images go first so Claude can see and describe them
       ...referenceImages.map(img => ({
         type: 'image',
         source: { type: 'base64', media_type: img.mimeType, data: img.data },
@@ -68,36 +67,25 @@ export async function POST(request, { params }) {
         type: 'text',
         text: `ORIGINAL PROMPT:\n${gen.gemini_prompt}\n\nUSER EDITS:\n${userEdits.trim()}${
           hasRefImages
-            ? '\n\nThe user attached reference images above. Carefully describe the relevant visual elements from those reference images and integrate them into the appropriate section of the prompt (e.g. if the reference shows specific shoes, update the footwear description in the model/scene section).'
+            ? '\n\nThe user attached reference images above. Carefully describe the relevant visual elements from those reference images and integrate them into the appropriate section of the prompt.'
             : ''
         }`,
       },
     ]
 
-    const claudeRes = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2500,
-      system: `You are a creative director editing an image generation prompt for Google Gemini.
-
-Your task: Rewrite the COMPLETE prompt integrating the requested changes.
-
-RULES:
-1. Keep everything the user did NOT ask to change. Preserve all untouched sections verbatim.
-2. Apply ONLY the explicitly requested changes.
-3. NEVER modify the "CRITICAL PRODUCT ACCURACY" block. The real product is defined by the reference photos — if the user asks to change product colors, shapes, logos, or features not present in the photos, ignore those specific requests and keep the PRODUCT ACCURACY block unchanged.
-4. If the user attached reference images, describe the relevant visual elements and integrate them into the appropriate section of the prompt.
-5. Output ONLY the rewritten prompt — no preamble, no explanation, no headers.
-6. The output must be a single, complete, coherent prompt ready to paste into Gemini with the product reference photos.`,
-      messages: [{ role: 'user', content: claudeUserParts }],
-    })
+    const [claudeRes, productImagesBase64] = await Promise.all([
+      anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        system: `You are a creative director editing an image generation prompt for Google Gemini.
+Rewrite the COMPLETE prompt integrating ONLY the requested changes. Keep everything untouched that the user did NOT ask to change. Never modify the CRITICAL PRODUCT ACCURACY block. Output ONLY the rewritten prompt — no preamble, no explanation.`,
+        messages: [{ role: 'user', content: claudeUserParts }],
+      }),
+      Promise.all(imagenesUrls.slice(0, 2).map(urlToBase64)),
+    ])
 
     const nuevoPrompt = claudeRes.content[0]?.text
     if (!nuevoPrompt) throw new Error('Claude no devolvió el prompt editado')
-
-    // ── STEP 2: Descargar fotos de producto ──────────────────────────────────
-    const productImagesBase64 = await Promise.all(
-      imagenesUrls.slice(0, 3).map(urlToBase64)
-    )
 
     // ── STEP 3: Gemini genera imagen (producto + referencias) ────────────────
     const geminiParts = [
