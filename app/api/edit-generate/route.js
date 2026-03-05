@@ -18,7 +18,7 @@ async function urlToBase64(url) {
 
 /**
  * POST /api/edit-generate
- * Body: { geminiPrompt, userEdits, imagenesUrls, template, producto_id }
+ * Body: { geminiPrompt, userEdits, imagenesUrls, template, producto_id, referenceImages?: [{data, mimeType}] }
  * Returns: { success, imagen_url, gemini_prompt }
  */
 export async function POST(request) {
@@ -26,7 +26,7 @@ export async function POST(request) {
     const user = await getUser()
     if (!user) return Response.json({ success: false, error: 'No autorizado' }, { status: 401 })
 
-    const { geminiPrompt, userEdits, imagenesUrls, template, producto_id } = await request.json()
+    const { geminiPrompt, userEdits, imagenesUrls, template, producto_id, referenceImages = [] } = await request.json()
 
     if (!geminiPrompt || !userEdits?.trim()) {
       return Response.json(
@@ -35,7 +35,24 @@ export async function POST(request) {
       )
     }
 
+    const hasRefImages = referenceImages.length > 0
+
     // ── STEP 1: Claude reescribe el prompt completo integrando los edits ────
+    const claudeUserParts = [
+      ...referenceImages.map(img => ({
+        type: 'image',
+        source: { type: 'base64', media_type: img.mimeType, data: img.data },
+      })),
+      {
+        type: 'text',
+        text: `ORIGINAL PROMPT:\n${geminiPrompt}\n\nUSER EDITS:\n${userEdits.trim()}${
+          hasRefImages
+            ? '\n\nThe user attached reference images above. Carefully describe the relevant visual elements from those reference images and integrate them into the appropriate section of the prompt.'
+            : ''
+        }`,
+      },
+    ]
+
     const claudeRes = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2500,
@@ -51,12 +68,10 @@ RULES:
 1. Keep everything the user did NOT ask to change. Preserve all untouched sections verbatim.
 2. Apply ONLY the explicitly requested changes.
 3. NEVER modify the "CRITICAL PRODUCT ACCURACY" block. The real product description is fixed by the reference photos. If the user asks to change product colors, shapes, logos, or features not present in the photos, ignore those specific requests and keep the PRODUCT ACCURACY block unchanged.
-4. Output ONLY the rewritten prompt — no preamble, no explanation, no headers.
-5. The output must be a single, complete, coherent prompt ready to paste into Gemini with the product reference photos.`,
-      messages: [{
-        role: 'user',
-        content: `ORIGINAL PROMPT:\n${geminiPrompt}\n\nUSER EDITS:\n${userEdits.trim()}`,
-      }],
+4. If the user attached reference images, describe the relevant visual elements and integrate them into the appropriate section of the prompt.
+5. Output ONLY the rewritten prompt — no preamble, no explanation, no headers.
+6. The output must be a single, complete, coherent prompt ready to paste into Gemini with the product reference photos.`,
+      messages: [{ role: 'user', content: claudeUserParts }],
     })
 
     const nuevoPrompt = claudeRes.content[0]?.text
@@ -71,6 +86,9 @@ RULES:
     const geminiParts = [
       { text: nuevoPrompt },
       ...productImagesBase64.map(img => ({
+        inlineData: { mimeType: img.mimeType, data: img.data },
+      })),
+      ...referenceImages.map(img => ({
         inlineData: { mimeType: img.mimeType, data: img.data },
       })),
     ]

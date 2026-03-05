@@ -29,7 +29,7 @@ export async function GET(request, { params }) {
     const db = getServiceClient()
     const { data, error } = await db
       .from('productos')
-      .select('*, generaciones(id, imagen_url, angulo, gemini_prompt, created_at, template_id, templates(seccion, nombre))')
+      .select('*, generaciones(id, imagen_url, angulo, gemini_prompt, version_history, created_at, template_id, templates(seccion, nombre))')
       .eq('id', id)
       .eq('creado_por', user.id)
       .order('created_at', { referencedTable: 'generaciones', ascending: false })
