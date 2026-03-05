@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const SECCION_COLORS = {
   HERO:        { badge: 'bg-violet-900/30 text-violet-400 border-violet-800/40', tab: 'bg-violet-600 text-white', inactive: 'text-violet-400 border-violet-800/40 hover:border-violet-600' },
@@ -32,10 +32,14 @@ function groupBySec(generaciones) {
 export default function ProductGeneraciones({ producto, generaciones: generacionesInit, loading = false, onBack, onGenerarNuevo, onEliminar }) {
   // Local copy so we can update image_url / version_history in-place after edits
   const [generaciones, setGeneraciones] = useState(generacionesInit)
+  const [seccionActiva, setSeccionActiva] = useState(() => Object.keys(groupBySec(generacionesInit))[0] || null)
 
-  const grupos = groupBySec(generaciones)
-  const secciones = Object.keys(grupos)
-  const [seccionActiva, setSeccionActiva] = useState(secciones[0] || null)
+  // Sync when parent loads real data (prop starts as [] then updates with DB data)
+  useEffect(() => {
+    setGeneraciones(generacionesInit)
+    const secs = Object.keys(groupBySec(generacionesInit))
+    setSeccionActiva(prev => (secs.includes(prev) ? prev : secs[0] || null))
+  }, [generacionesInit])
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [fullscreen, setFullscreen] = useState(null)
