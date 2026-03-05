@@ -7,6 +7,11 @@ const PASOS_LOADING = [
   { label: 'Gemini generando imagen...', duracion: 99999 },
 ]
 
+const PASOS_EDIT = [
+  { label: 'Claude integrando cambios...', duracion: 5000 },
+  { label: 'Gemini generando imagen...', duracion: 99999 },
+]
+
 const SECCION_COLORS = {
   HERO:        'bg-violet-900/30 text-violet-400 border-violet-800/40',
   OFERTA:      'bg-amber-900/30 text-amber-400 border-amber-800/40',
@@ -14,6 +19,8 @@ const SECCION_COLORS = {
   STORY:       'bg-green-900/30 text-green-400 border-green-800/40',
   TESTIMONIAL: 'bg-rose-900/30 text-rose-400 border-rose-800/40',
 }
+
+const MAX_VERSIONES = 5
 
 /**
  * Step4Generate — Paso 4: genera el anuncio final.
@@ -32,14 +39,29 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
   const [pasoActual, setPasoActual] = useState(0)
   const [showPrompt, setShowPrompt] = useState(false)
 
+  // Edit state
+  const [userEdits, setUserEdits] = useState('')
+  const [estadoEdit, setEstadoEdit] = useState('idle') // idle | loading | error
+  const [errorEdit, setErrorEdit] = useState(null)
+  const [pasoEdit, setPasoEdit] = useState(0)
+
+  // Version history: [{ imagenUrl, geminiPrompt }], most recent first
+  const [versiones, setVersiones] = useState([])
+
   const timersRef = useRef([])
+  const editTimersRef = useRef([])
 
   function limpiarTimers() {
     timersRef.current.forEach(clearTimeout)
     timersRef.current = []
   }
 
-  useEffect(() => () => limpiarTimers(), [])
+  function limpiarEditTimers() {
+    editTimersRef.current.forEach(clearTimeout)
+    editTimersRef.current = []
+  }
+
+  useEffect(() => () => { limpiarTimers(); limpiarEditTimers() }, [])
 
   function avanzarPasos(idx = 0) {
     if (idx >= PASOS_LOADING.length - 1) return
@@ -48,6 +70,19 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
       avanzarPasos(idx + 1)
     }, PASOS_LOADING[idx].duracion)
     timersRef.current.push(t)
+  }
+
+  function avanzarPasosEdit(idx = 0) {
+    if (idx >= PASOS_EDIT.length - 1) return
+    const t = setTimeout(() => {
+      setPasoEdit(idx + 1)
+      avanzarPasosEdit(idx + 1)
+    }, PASOS_EDIT[idx].duracion)
+    editTimersRef.current.push(t)
+  }
+
+  function pushVersion(url, prompt) {
+    setVersiones(prev => [{ imagenUrl: url, geminiPrompt: prompt }, ...prev].slice(0, MAX_VERSIONES))
   }
 
   async function handleGenerar() {
@@ -78,6 +113,7 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
 
       if (!json.success) throw new Error(json.error || 'Error al generar')
 
+      pushVersion(json.imagen_url, json.gemini_prompt)
       setImagenUrl(json.imagen_url)
       setGeminiPrompt(json.gemini_prompt)
       setEstado('done')
@@ -86,6 +122,50 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
       setError(err.message)
       setEstado('error')
     }
+  }
+
+  async function handleAplicarCambios() {
+    if (!userEdits.trim() || !geminiPrompt) return
+
+    setEstadoEdit('loading')
+    setErrorEdit(null)
+    setPasoEdit(0)
+    limpiarEditTimers()
+    avanzarPasosEdit(0)
+
+    try {
+      const res = await fetch('/api/edit-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          geminiPrompt,
+          userEdits: userEdits.trim(),
+          imagenesUrls,
+          template,
+          producto_id: productoId || null,
+        }),
+      })
+
+      const json = await res.json()
+      limpiarEditTimers()
+
+      if (!json.success) throw new Error(json.error || 'Error al aplicar cambios')
+
+      pushVersion(json.imagen_url, json.gemini_prompt)
+      setImagenUrl(json.imagen_url)
+      setGeminiPrompt(json.gemini_prompt)
+      setUserEdits('')
+      setEstadoEdit('idle')
+    } catch (err) {
+      limpiarEditTimers()
+      setErrorEdit(err.message)
+      setEstadoEdit('error')
+    }
+  }
+
+  function handleRestoreVersion(version) {
+    setImagenUrl(version.imagenUrl)
+    setGeminiPrompt(version.geminiPrompt)
   }
 
   function handleDescargar() {
@@ -98,6 +178,7 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
   }
 
   const seccionColor = SECCION_COLORS[template?.seccion] || 'bg-gray-800 text-gray-400 border-gray-700'
+  const editando = estadoEdit === 'loading'
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
@@ -204,7 +285,6 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
           {/* Estado: loading */}
           {estado === 'loading' && (
             <div className="flex-1 flex flex-col items-center justify-center gap-8 py-12">
-              {/* Animated placeholder imagen */}
               <div className="relative w-48 aspect-[9/16] rounded-xl overflow-hidden bg-gray-900 border border-gray-800">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-900/20 to-gray-900 animate-pulse" />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -212,7 +292,6 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
                 </div>
               </div>
 
-              {/* Steps */}
               <div className="flex flex-col gap-3 w-full max-w-sm">
                 {PASOS_LOADING.map((paso, idx) => (
                   <div
@@ -271,22 +350,59 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
           {/* Estado: done */}
           {estado === 'done' && imagenUrl && (
             <div className="flex flex-col gap-6">
+
               {/* Imagen generada */}
               <div className="flex justify-center">
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-violet-900/20 border border-gray-800 max-w-sm w-full">
                   <img
                     src={imagenUrl}
                     alt="Anuncio generado"
-                    className="w-full object-contain"
+                    className={`w-full object-contain transition-opacity duration-300 ${editando ? 'opacity-30' : 'opacity-100'}`}
                   />
+                  {/* Overlay de edición */}
+                  {editando && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                      <span className="w-8 h-8 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                      <div className="flex flex-col gap-2 w-44">
+                        {PASOS_EDIT.map((paso, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 transition-all duration-500 ${
+                              idx < pasoEdit ? 'opacity-40' : idx === pasoEdit ? 'opacity-100' : 'opacity-25'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center ${
+                              idx < pasoEdit
+                                ? 'bg-green-500/20 border border-green-500/40'
+                                : idx === pasoEdit
+                                  ? 'border border-violet-400/40'
+                                  : 'border border-gray-700'
+                            }`}>
+                              {idx < pasoEdit ? (
+                                <svg className="w-2.5 h-2.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : idx === pasoEdit ? (
+                                <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" />
+                              ) : null}
+                            </div>
+                            <span className={`text-xs ${idx === pasoEdit ? 'text-gray-200' : 'text-gray-600'}`}>
+                              {paso.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Acciones */}
+              {/* Acciones principales */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <button
                   onClick={handleDescargar}
-                  className="flex items-center gap-2 bg-white text-gray-900 font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-all"
+                  disabled={editando}
+                  className="flex items-center gap-2 bg-white text-gray-900 font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-gray-100 transition-all disabled:opacity-40"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -296,7 +412,8 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
 
                 <button
                   onClick={handleGenerar}
-                  className="flex items-center gap-2 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white text-sm px-6 py-2.5 rounded-lg transition-all"
+                  disabled={editando}
+                  className="flex items-center gap-2 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-white text-sm px-6 py-2.5 rounded-lg transition-all disabled:opacity-40"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -306,7 +423,8 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
 
                 <button
                   onClick={onNuevaCampania}
-                  className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all"
+                  disabled={editando}
+                  className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-all disabled:opacity-40"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -314,6 +432,62 @@ export default function Step4Generate({ session, onBack, onNuevaCampania }) {
                   Nueva campaña
                 </button>
               </div>
+
+              {/* Caja de edición */}
+              <div className="border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+                <p className="text-xs font-medium text-gray-500">Refinar imagen</p>
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    value={userEdits}
+                    onChange={e => setUserEdits(e.target.value)}
+                    disabled={editando}
+                    rows={2}
+                    placeholder="Ej: que el jugador se vea de rodillas para abajo, cambiar efecto a color cyan, hacer headline más grande..."
+                    className="flex-1 text-sm bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 placeholder-gray-600 resize-none focus:outline-none focus:border-gray-600 disabled:opacity-40"
+                  />
+                  <button
+                    onClick={handleAplicarCambios}
+                    disabled={editando || !userEdits.trim()}
+                    className="flex-shrink-0 flex items-center gap-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-all"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Aplicar
+                  </button>
+                </div>
+                {estadoEdit === 'error' && errorEdit && (
+                  <p className="text-xs text-red-400">{errorEdit}</p>
+                )}
+              </div>
+
+              {/* Historial de versiones */}
+              {versiones.length > 1 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium text-gray-600">Versiones</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {versiones.map((v, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleRestoreVersion(v)}
+                        disabled={editando}
+                        title={`Versión ${versiones.length - idx}`}
+                        className={`flex-shrink-0 w-16 aspect-[9/16] rounded-lg overflow-hidden border transition-all disabled:opacity-40 ${
+                          v.imagenUrl === imagenUrl
+                            ? 'border-violet-500 ring-1 ring-violet-500/50'
+                            : 'border-gray-700 hover:border-gray-600'
+                        }`}
+                      >
+                        <img
+                          src={v.imagenUrl}
+                          alt={`Versión ${versiones.length - idx}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Prompt expandible */}
               {geminiPrompt && (
