@@ -75,7 +75,7 @@ export async function POST(request, { params }) {
 
     const [claudeRes, productImagesBase64] = await Promise.all([
       anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-opus-4-5-20250929',
         max_tokens: 1500,
         system: `You are a creative director editing an image generation prompt for Google Gemini.
 Rewrite the COMPLETE prompt integrating ONLY the requested changes. Keep everything untouched that the user did NOT ask to change. Never modify the CRITICAL PRODUCT ACCURACY block. Output ONLY the rewritten prompt — no preamble, no explanation.`,
