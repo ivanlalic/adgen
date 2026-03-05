@@ -100,10 +100,10 @@ Rewrite the COMPLETE prompt integrating ONLY the requested changes. Keep everyth
     ]
 
     const geminiRes = await genai.models.generateContent({
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: 'gemini-3.1-flash-image-preview',
       contents: [{ role: 'user', parts: geminiParts }],
       config: {
-        responseModalities: ['Text', 'Image'],
+        imageConfig: { aspectRatio: '9:16', imageSize: '1K' },
       },
     })
 
