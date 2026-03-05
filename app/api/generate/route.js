@@ -58,7 +58,7 @@ export async function POST(request) {
     ]
 
     const claudeRes = await anthropic.messages.create({
-      model: 'claude-opus-4-5-20250929',
+      model: 'claude-opus-4-6',
       max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: claudeUserParts }],

@@ -59,7 +59,7 @@ export async function POST(request) {
     const userText = buildAnalyzeUserText(body.nombre_producto, body.descripcion || '')
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5-20250929',
+      model: 'claude-opus-4-6',
       max_tokens: 3000,
       system: PROMPT_ANALYZE_VISUAL_SYSTEM,
       messages: [

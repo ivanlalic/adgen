@@ -23,7 +23,7 @@ export async function POST(request) {
     const userText = buildAnglesUserText(analisis, sugerencia)
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5-20250929',
+      model: 'claude-opus-4-6',
       max_tokens: sugerencia ? 4000 : 6000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userText }],

@@ -54,7 +54,7 @@ export async function POST(request) {
     ]
 
     const claudeRes = await anthropic.messages.create({
-      model: 'claude-opus-4-5-20250929',
+      model: 'claude-opus-4-6',
       max_tokens: 2500,
       system: `You are a creative director editing an image generation prompt for Google Gemini.
 

@@ -39,7 +39,7 @@ export async function POST(request) {
       : []
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5-20250929',
+      model: 'claude-opus-4-6',
       max_tokens: 2000,
       system: PROMPT_REFINE_ANGLE_SYSTEM,
       messages: [{
