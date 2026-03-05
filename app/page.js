@@ -6,16 +6,18 @@ import Step1Upload from '@/components/Step1Upload'
 import Step2Angles from '@/components/Step2Angles'
 import Step3Templates from '@/components/Step3Templates'
 import Step4Generate from '@/components/Step4Generate'
+import ProductGeneraciones from '@/components/ProductGeneraciones'
 
 /**
  * page.js — Orquestador principal del stepper.
- * paso: 'home' | 'upload' | 'analysis' | 'templates' | 'generate'
+ * paso: 'home' | 'upload' | 'analysis' | 'templates' | 'generate' | 'generaciones'
  */
 export default function Home() {
   const [paso, setPaso] = useState('home')
   const [user, setUser] = useState(null)
   const [productos, setProductos] = useState([])
   const [loadingProductos, setLoadingProductos] = useState(true)
+  const [productoActivo, setProductoActivo] = useState(null) // producto con generaciones cargadas
   const [session, setSession] = useState({
     productoId: null,
     imagenesUrls: [],
@@ -65,7 +67,23 @@ export default function Home() {
     setPaso('upload')
   }
 
-  function onSelectProducto(producto) {
+  async function onSelectProducto(producto) {
+    // Cargar el producto con sus generaciones y mostrar la vista de galería
+    try {
+      const res = await fetch(`/api/productos/${producto.id}`)
+      const json = await res.json()
+      if (json.success) {
+        setProductoActivo(json.producto)
+      } else {
+        setProductoActivo({ ...producto, generaciones: [] })
+      }
+    } catch {
+      setProductoActivo({ ...producto, generaciones: [] })
+    }
+    setPaso('generaciones')
+  }
+
+  function onGenerarNuevoParaProducto(producto) {
     setSession({
       productoId: producto.id,
       imagenesUrls: producto.imagenes_urls || [],
@@ -77,6 +95,13 @@ export default function Home() {
       imagenGeneradaUrl: null,
     })
     setPaso('analysis')
+  }
+
+  function onEliminarGeneracion(id) {
+    setProductoActivo(prev => ({
+      ...prev,
+      generaciones: prev.generaciones.filter(g => g.id !== id),
+    }))
   }
 
   async function onEliminarProducto(id) {
@@ -172,6 +197,18 @@ export default function Home() {
         session={session}
         onBack={() => setPaso('templates')}
         onNuevaCampania={iniciarNuevoProducto}
+      />
+    )
+  }
+
+  if (paso === 'generaciones' && productoActivo) {
+    return (
+      <ProductGeneraciones
+        producto={productoActivo}
+        generaciones={productoActivo.generaciones || []}
+        onBack={() => setPaso('home')}
+        onGenerarNuevo={() => onGenerarNuevoParaProducto(productoActivo)}
+        onEliminar={onEliminarGeneracion}
       />
     )
   }
