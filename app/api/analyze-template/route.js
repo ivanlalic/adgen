@@ -10,13 +10,11 @@ async function urlToBase64(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`No se pudo descargar la imagen del template: ${url}`)
   const buffer = await res.arrayBuffer()
-  return Buffer.from(buffer).toString('base64')
-}
-
-function getMediaType(url) {
-  const ext = url.split('.').pop()?.toLowerCase()
-  const map = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
-  return map[ext] || 'image/jpeg'
+  const contentType = res.headers.get('content-type') || 'image/jpeg'
+  return {
+    data: Buffer.from(buffer).toString('base64'),
+    mimeType: contentType.split(';')[0],
+  }
 }
 
 // POST { template_id }
@@ -49,8 +47,7 @@ export async function POST(request) {
     }
 
     // Cache miss — run Claude analysis
-    const imageBase64 = await urlToBase64(template.imagen_url)
-    const mediaType = getMediaType(template.imagen_url)
+    const { data: imageBase64, mimeType: mediaType } = await urlToBase64(template.imagen_url)
 
     const response = await client.messages.create({
       model: 'claude-opus-4-6',
