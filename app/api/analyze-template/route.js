@@ -6,14 +6,23 @@ export const maxDuration = 120
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function detectMimeType(buffer) {
+  const bytes = new Uint8Array(buffer)
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return 'image/jpeg'
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return 'image/png'
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp'
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) return 'image/gif'
+  return 'image/jpeg'
+}
+
 async function urlToBase64(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`No se pudo descargar la imagen del template: ${url}`)
   const buffer = await res.arrayBuffer()
-  const contentType = res.headers.get('content-type') || 'image/jpeg'
   return {
     data: Buffer.from(buffer).toString('base64'),
-    mimeType: contentType.split(';')[0],
+    mimeType: detectMimeType(buffer),
   }
 }
 
