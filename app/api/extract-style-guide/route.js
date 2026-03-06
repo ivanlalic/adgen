@@ -8,12 +8,21 @@ export const maxDuration = 120
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
+function detectMimeType(buffer) {
+  const b = new Uint8Array(buffer)
+  if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return 'image/jpeg'
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return 'image/png'
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp'
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return 'image/gif'
+  return 'image/jpeg'
+}
+
 async function urlToBase64(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`No se pudo descargar imagen: ${url}`)
   const buf = await res.arrayBuffer()
-  const contentType = res.headers.get('content-type') || 'image/jpeg'
-  return { data: Buffer.from(buf).toString('base64'), mimeType: contentType.split(';')[0] }
+  return { data: Buffer.from(buf).toString('base64'), mimeType: detectMimeType(buf) }
 }
 
 /**
@@ -49,7 +58,7 @@ export async function POST(request) {
     // Claude Opus extracts the style guide
     const claudeRes = await anthropic.messages.create({
       model: 'claude-opus-4-6',
-      max_tokens: 2000,
+      max_tokens: 4096,
       system: PROMPT_EXTRACT_STYLE_GUIDE,
       messages: [{
         role: 'user',
